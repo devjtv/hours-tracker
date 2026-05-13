@@ -1379,7 +1379,7 @@ export default function App() {
                   providerOptions.find((option) => option.value === data.settings.providerType) ?? null
                 }
                 onChange={(option) => handleProviderPresetChange(option?.value ?? 'custom')}
-                filterOption={createFilter({ matchFrom: 'start' })}
+                filterOption={createFilter({ matchFrom: 'any' })}
                 noOptionsMessage={() => null}
               />
             </label>
@@ -1605,7 +1605,7 @@ export default function App() {
                   onInputChange={handleProjectInputChange}
                   onChange={(option) => updateDraftProject(option?.value ?? '')}
                   onCreateOption={updateDraftProject}
-                  filterOption={createFilter({ matchFrom: 'start' })}
+                  filterOption={createFilter({ matchFrom: 'any' })}
                   noOptionsMessage={() => null}
                   isClearable
                 />
@@ -1636,7 +1636,7 @@ export default function App() {
                     setDraft((current) => ({ ...current, taskId: option?.value ?? getDefaultTaskId(data) }))
                   }
                   formatOptionLabel={renderTaskOptionLabel}
-                  filterOption={createFilter({ matchFrom: 'start' })}
+                  filterOption={createFilter({ matchFrom: 'any' })}
                   noOptionsMessage={() => null}
                 />
               </label>
