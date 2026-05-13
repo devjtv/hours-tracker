@@ -172,6 +172,13 @@ function formatMinutes(totalMinutes: number) {
   return `${mins} min`;
 }
 
+function entryDisplayProject(entry: TimeEntry, tasks: TaskItem[]) {
+  const project = entry.project.trim();
+  if (project) return project;
+  const taskName = tasks.find((task) => task.id === entry.taskId)?.name;
+  return taskName?.trim() || 'Untitled';
+}
+
 function entryMinutes(entry: TimeEntry) {
   return Math.max(
     0,
@@ -498,7 +505,7 @@ export default function App() {
   }, [draft.details, showComposer]);
 
   useEffect(() => {
-    if (!showComposer || !editingEntryId || !draft.project.trim() || !draft.start || !draft.end) return;
+    if (!showComposer || !editingEntryId || !draft.start || !draft.end) return;
 
     setData((current) => {
       const existingEntry = current.entries.find((entry) => entry.id === editingEntryId);
@@ -609,12 +616,13 @@ export default function App() {
   const summaryByProject = useMemo(() => {
     const grouped = new Map<string, TimeEntry[]>();
     activeEntries.forEach((entry) => {
-      const bucket = grouped.get(entry.project) ?? [];
+      const label = entryDisplayProject(entry, data.tasks);
+      const bucket = grouped.get(label) ?? [];
       bucket.push(entry);
-      grouped.set(entry.project, bucket);
+      grouped.set(label, bucket);
     });
     return [...grouped.entries()];
-  }, [activeEntries]);
+  }, [activeEntries, data.tasks]);
 
   const reportEntries = useMemo(
     () => data.entries.filter((entry) => dayKey(entry.start) === reportDay),
@@ -704,7 +712,7 @@ export default function App() {
   }
 
   function saveEntry() {
-    if (!draft.project.trim() || !draft.start || !draft.end) return;
+    if (!draft.start || !draft.end) return;
 
     const nextTaskId = draft.taskId || getDefaultTaskId(data);
 
@@ -904,7 +912,10 @@ export default function App() {
     try {
       const result = await window.hoursTracker.generateReport({
         settings: data.settings,
-        entries: dayEntries,
+        entries: dayEntries.map((entry) => ({
+          ...entry,
+          project: entryDisplayProject(entry, data.tasks)
+        })),
         tasks: data.tasks,
         tags: data.tags,
         dateLabel: dateBracket(dayEntries[0]?.start ?? new Date().toISOString())
@@ -938,7 +949,10 @@ export default function App() {
     try {
       const result = await window.hoursTracker.refineReport({
         settings: data.settings,
-        entries: dayEntries,
+        entries: dayEntries.map((entry) => ({
+          ...entry,
+          project: entryDisplayProject(entry, data.tasks)
+        })),
         tasks: data.tasks,
         tags: data.tags,
         dateLabel: dateBracket(dayEntries[0]?.start ?? `${reportDay}T00:00:00`),
@@ -1018,13 +1032,16 @@ export default function App() {
                         />
                         <div className="entry-main">
                           <div className="entry-title-row">
-                            <h3>{entry.project}</h3>
+                            <h3>{entryDisplayProject(entry, data.tasks)}</h3>
                             <strong>{formatMinutes(entryMinutes(entry))}</strong>
                           </div>
-                          <p>
-                            {task?.name ?? 'Without task'}
-                            {entry.details ? ` • ${entry.details}` : ''}
-                          </p>
+                          {entry.project.trim() || entry.details ? (
+                            <p>
+                              {entry.project.trim() ? (task?.name ?? 'Without task') : ''}
+                              {entry.project.trim() && entry.details ? ' • ' : ''}
+                              {entry.details}
+                            </p>
+                          ) : null}
                           {entry.tagIds.length > 0 ? (
                             <div className="tag-row">
                               {entry.tagIds.map((tagId) => (

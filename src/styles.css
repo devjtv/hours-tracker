@@ -281,6 +281,10 @@ button {
 }
 
 .entry-main {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
   padding: 14px 14px 12px 12px;
 }
 
@@ -300,8 +304,8 @@ button {
   font-size: 0.98rem;
 }
 
-.entry-main p {
-  margin: 6px 0 0;
+.entry-main > p {
+  margin: 0;
   color: #cbccd1;
   font-size: 0.92rem;
 }
