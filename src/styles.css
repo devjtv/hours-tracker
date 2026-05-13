@@ -646,6 +646,47 @@ button {
   margin-top: 18px;
 }
 
+.report-preview {
+  padding: 16px 20px;
+  border: 1px solid #414348;
+  border-radius: 14px;
+  color: #f5f6f7;
+  background: #1c1d1f;
+  line-height: 1.55;
+  overflow-y: auto;
+}
+
+.report-preview p {
+  margin: 0 0 10px;
+}
+
+.report-preview p:last-child {
+  margin-bottom: 0;
+}
+
+.report-preview ul {
+  margin: 4px 0 12px;
+  padding-left: 22px;
+}
+
+.report-preview ul ul {
+  margin: 4px 0 6px;
+  padding-left: 20px;
+  list-style: circle;
+}
+
+.report-preview li {
+  margin: 2px 0;
+}
+
+.report-preview li strong {
+  color: #fff;
+}
+
+.report-preview strong {
+  font-weight: 600;
+}
+
 .report-output,
 .composer-fields textarea,
 .settings-grid textarea {

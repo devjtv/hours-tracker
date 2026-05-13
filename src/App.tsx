@@ -428,6 +428,7 @@ export default function App() {
   const [reportError, setReportError] = useState('');
   const [reportFeedback, setReportFeedback] = useState('');
   const [reportRefineBusy, setReportRefineBusy] = useState(false);
+  const [reportEditing, setReportEditing] = useState(false);
   const [collapsedDays, setCollapsedDays] = useState<string[]>([]);
   const [newTaskName, setNewTaskName] = useState('');
   const [newTaskColor, setNewTaskColor] = useState('#f6a318');
@@ -922,6 +923,7 @@ export default function App() {
       });
       setReportText(result.content);
       setReportFeedback('');
+      setReportEditing(false);
       setView('reports');
     } catch (error) {
       setReportError(error instanceof Error ? error.message : 'Failed to generate report.');
@@ -1105,14 +1107,28 @@ export default function App() {
             <button className="ghost-button" onClick={() => copyReport('markdown')} disabled={!reportText.trim()}>
               Copy Markdown
             </button>
+            <button
+              className="ghost-button"
+              onClick={() => setReportEditing((v) => !v)}
+              disabled={!reportText.trim()}
+            >
+              {reportEditing ? 'Done editing' : 'Edit'}
+            </button>
             {copyStatus ? <span className="copy-status">{copyStatus}</span> : null}
           </div>
-          <textarea
-            className="report-output main-report-output"
-            value={reportText}
-            onChange={(event) => setReportText(event.target.value)}
-            placeholder="Generate a report for the selected day."
-          />
+          {reportText.trim() && !reportEditing ? (
+            <div
+              className="report-preview main-report-output"
+              dangerouslySetInnerHTML={{ __html: reportTextToHtml(reportText) }}
+            />
+          ) : (
+            <textarea
+              className="report-output main-report-output"
+              value={reportText}
+              onChange={(event) => setReportText(event.target.value)}
+              placeholder="Generate a report for the selected day."
+            />
+          )}
           <div className="report-feedback-card">
             <label className="full-width">
               <span>Follow-up feedback</span>
