@@ -368,7 +368,7 @@ button {
 
 .page-controls {
   display: flex;
-  align-items: end;
+  align-items: flex-end;
   gap: 12px;
   margin-top: 18px;
 }
@@ -987,7 +987,6 @@ button {
     padding: 14px;
   }
 
-  .page-controls,
   .inline-form,
   .task-form,
   .editable-form,
@@ -997,6 +996,7 @@ button {
   }
 
   .page-controls {
-    align-items: stretch;
+    flex-wrap: wrap;
+    align-items: flex-end;
   }
 }
