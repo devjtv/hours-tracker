@@ -439,6 +439,7 @@ export default function App() {
   const [newTagName, setNewTagName] = useState('');
   const [editingTagId, setEditingTagId] = useState<string | null>(null);
   const [tagDraft, setTagDraft] = useState({ name: '' });
+  const [projectInput, setProjectInput] = useState('');
   const [appVersion, setAppVersion] = useState('');
   const [updateStatus, setUpdateStatus] = useState<{
     state: 'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error';
@@ -665,6 +666,7 @@ export default function App() {
       ...defaultDraft(data.tasks, data.entries, activeDay),
       taskId: getDefaultTaskId(data)
     });
+    setProjectInput('');
     setShowComposer(true);
   }
 
@@ -672,11 +674,13 @@ export default function App() {
     setEditingEntryId(entry.id);
     setCollapsedDays((current) => current.filter((day) => day !== dayKey(entry.start)));
     setDraft(entryToDraft(entry));
+    setProjectInput('');
     setShowComposer(true);
   }
 
   function updateDraftProject(project: string) {
     setDraft((current) => ({ ...current, project }));
+    setProjectInput('');
   }
 
   function closeComposer() {
@@ -686,11 +690,12 @@ export default function App() {
       ...defaultDraft(data.tasks, data.entries, activeDay),
       taskId: getDefaultTaskId(data)
     });
+    setProjectInput('');
   }
 
   function handleProjectInputChange(inputValue: string, meta: InputActionMeta) {
     if (meta.action === 'input-change') {
-      updateDraftProject(inputValue);
+      setProjectInput(inputValue);
     }
   }
 
@@ -716,11 +721,12 @@ export default function App() {
     if (!draft.start || !draft.end) return;
 
     const nextTaskId = draft.taskId || getDefaultTaskId(data);
+    const projectName = draft.project.trim() || projectInput.trim();
 
     setData((current) => {
       const nextEntry: TimeEntry = {
         id: editingEntryId ?? uid('entry'),
-        project: draft.project.trim(),
+        project: projectName,
         details: draft.details.trim(),
         taskId: nextTaskId,
         tagIds: draft.tagIds,
@@ -1601,7 +1607,7 @@ export default function App() {
                   formatCreateLabel={(inputValue) => `Use "${inputValue}"`}
                   options={projectOptions}
                   value={draft.project ? { value: draft.project, label: draft.project } : null}
-                  inputValue={draft.project}
+                  inputValue={projectInput}
                   onInputChange={handleProjectInputChange}
                   onChange={(option) => updateDraftProject(option?.value ?? '')}
                   onCreateOption={updateDraftProject}
