@@ -1,0 +1,76 @@
+{
+  "name": "hours-tracker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local-first mac desktop hours tracking app",
+  "main": "electron/main.cjs",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -k \"vite\" \"wait-on tcp:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
+    "build:web": "tsc -b && vite build",
+    "build:electron": "node scripts/copy-electron.mjs",
+    "build": "npm run build:web && npm run build:electron",
+    "preview": "vite preview",
+    "package:mac": "npm run build && electron-builder --mac dmg",
+    "release:mac": "npm run build && electron-builder --mac dmg --publish always"
+  },
+  "build": {
+    "appId": "com.local.hourstracker",
+    "productName": "Hours Tracker",
+    "files": [
+      "dist/**",
+      "electron/**",
+      "package.json"
+    ],
+    "directories": {
+      "buildResources": "assets"
+    },
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "assets/icon.png",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ]
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "devjtv",
+        "repo": "hours-tracker"
+      }
+    ]
+  },
+  "dependencies": {
+    "electron-store": "^10.0.1",
+    "electron-updater": "^6.8.3",
+    "lucide-react": "^0.511.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-select": "^5.10.2"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
+    "electron": "^31.7.7",
+    "electron-builder": "^25.1.8",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10",
+    "wait-on": "^8.0.1"
+  }
+}
