@@ -248,6 +248,19 @@ function htmlToPlainText(html: string) {
   return doc.body.textContent ?? '';
 }
 
+function inlineMarkdownToHtml(text: string) {
+  let result = escapeHtml(text);
+  result = result.replace(/\*\*([^*\n]+?)\*\*/g, '<strong>$1</strong>');
+  result = result.replace(/__([^_\n]+?)__/g, '<strong>$1</strong>');
+  result = result.replace(/(^|[^*])\*([^*\n]+?)\*(?!\*)/g, '$1<em>$2</em>');
+  result = result.replace(/(^|[^_])_([^_\n]+?)_(?!_)/g, '$1<em>$2</em>');
+  return result;
+}
+
+function stripOuterMarkdown(line: string) {
+  return line.replace(/^[*_]+/, '').replace(/[*_]+$/, '').trim();
+}
+
 function reportTextToHtml(text: string) {
   const trimmed = text.trim();
   if (!trimmed) return '';
@@ -274,7 +287,7 @@ function reportTextToHtml(text: string) {
     const trimmedLine = line.trim();
     if (!trimmedLine) continue;
 
-    const topBullet = /^[-*•]\s+/.test(trimmedLine);
+    const topBullet = /^[-•]\s+/.test(trimmedLine);
     const nestedBullet = /^\s{2,}[-*•]\s+/.test(rawLine);
 
     if (nestedBullet) {
@@ -286,7 +299,8 @@ function reportTextToHtml(text: string) {
         html.push('<ul>');
         openSub = true;
       }
-      html.push(`<li>${escapeHtml(trimmedLine.replace(/^[-*•]\s+/, ''))}</li>`);
+      const content = trimmedLine.replace(/^[-*•]\s+/, '');
+      html.push(`<li>${inlineMarkdownToHtml(content)}</li>`);
       continue;
     }
 
@@ -299,25 +313,27 @@ function reportTextToHtml(text: string) {
         html.push('</ul>');
         openSub = false;
       }
-      const content = trimmedLine.replace(/^[-*•]\s+/, '');
-      html.push(`<li><strong>${escapeHtml(content)}</strong></li>`);
+      const content = stripOuterMarkdown(trimmedLine.replace(/^[-•]\s+/, ''));
+      html.push(`<li><strong>${inlineMarkdownToHtml(content)}</strong></li>`);
       continue;
     }
 
     closeLists();
 
-    if (/^date:/i.test(trimmedLine)) {
-      const value = trimmedLine.replace(/^date:\s*/i, '');
-      html.push(`<p><strong>Date:</strong> ${escapeHtml(value)}</p>`);
+    const headerLine = stripOuterMarkdown(trimmedLine);
+
+    if (/^date:/i.test(headerLine)) {
+      const value = headerLine.replace(/^date:\s*/i, '');
+      html.push(`<p><strong>Date:</strong> ${inlineMarkdownToHtml(value)}</p>`);
       continue;
     }
 
-    if (/^tasks worked on:/i.test(trimmedLine)) {
+    if (/^tasks worked on:?$/i.test(headerLine)) {
       html.push('<p><strong>Tasks Worked On:</strong></p>');
       continue;
     }
 
-    html.push(`<p>${escapeHtml(trimmedLine)}</p>`);
+    html.push(`<p>${inlineMarkdownToHtml(trimmedLine)}</p>`);
   }
 
   closeLists();

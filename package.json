@@ -1,6 +1,6 @@
 {
   "name": "hours-tracker",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "private": true,
   "description": "Local-first mac desktop hours tracking app",
   "main": "electron/main.cjs",
