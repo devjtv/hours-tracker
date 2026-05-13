@@ -24,6 +24,21 @@ declare global {
         feedback: string;
       }) => Promise<{ content: string }>;
       writeClipboard: (payload: { text: string; html?: string }) => Promise<{ ok: true }>;
+      getAppVersion: () => Promise<string>;
+      checkForUpdates: () => Promise<{ ok: boolean; version?: string | null; message?: string }>;
+      quitAndInstall: () => Promise<void>;
+      onUpdaterEvent: (
+        callback: (event: {
+          name:
+            | 'checking'
+            | 'available'
+            | 'not-available'
+            | 'progress'
+            | 'downloaded'
+            | 'error';
+          payload?: { version?: string; percent?: number; message?: string };
+        }) => void
+      ) => () => void;
     };
   }
 }

@@ -12,9 +12,11 @@
   box-sizing: border-box;
 }
 
+html,
 body {
+  height: 100vh;
   margin: 0;
-  min-height: 100vh;
+  overflow: hidden;
   background: #1b1b1c;
 }
 
@@ -32,12 +34,12 @@ button {
 }
 
 #root {
-  min-height: 100vh;
+  height: 100vh;
 }
 
 .loading-shell,
 .app-shell {
-  min-height: 100vh;
+  height: 100vh;
 }
 
 .loading-shell {
@@ -49,6 +51,7 @@ button {
 .app-shell {
   display: grid;
   grid-template-columns: 182px 1fr;
+  overflow: hidden;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 24%),
     linear-gradient(180deg, #232325 0%, #181819 100%);
@@ -58,6 +61,7 @@ button {
   display: flex;
   flex-direction: column;
   padding: 22px 16px 18px;
+  overflow-y: auto;
   border-right: 1px solid #3a3a3d;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent),
@@ -105,9 +109,12 @@ button {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .topbar {
+  flex: 0 0 auto;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -181,7 +188,8 @@ button {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(300px, 0.6fr);
   min-height: 0;
-  flex: 1;
+  flex: 1 1 0;
+  overflow-y: auto;
 }
 
 .content-grid.single-panel {
@@ -422,6 +430,37 @@ button {
   display: grid;
   gap: 8px;
   min-width: 220px;
+}
+
+.about-card {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid #37383b;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 28%),
+    #242527;
+}
+
+.about-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.about-row h3 {
+  margin: 4px 0 0;
+  font-size: 1.05rem;
+  color: #f5f6f7;
+}
+
+.about-status {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #aeb6c3;
 }
 
 .panel-card {

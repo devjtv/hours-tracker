@@ -1,6 +1,6 @@
 {
   "name": "hours-tracker",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Local-first mac desktop hours tracking app",
   "main": "electron/main.cjs",
@@ -12,7 +12,7 @@
     "build": "npm run build:web && npm run build:electron",
     "preview": "vite preview",
     "package:mac": "npm run build && electron-builder --mac dmg",
-    "release:mac": "npm run build && electron-builder --mac dmg --publish always"
+    "release:mac": "npm run build && electron-builder --mac --publish always"
   },
   "build": {
     "appId": "com.local.hourstracker",
@@ -32,15 +32,13 @@
         {
           "target": "dmg",
           "arch": [
-            "arm64",
-            "x64"
+            "arm64"
           ]
         },
         {
           "target": "zip",
           "arch": [
-            "arm64",
-            "x64"
+            "arm64"
           ]
         }
       ]

@@ -210,6 +210,7 @@ app.whenReady().then(() => {
     await writeData(payload);
     return { ok: true };
   });
+  ipcMain.handle('app:get-version', () => app.getVersion());
   ipcMain.handle('clipboard:write', async (_event, payload) => {
     clipboard.write({
       text: payload?.text ?? '',
@@ -302,15 +303,33 @@ app.whenReady().then(() => {
   }
 });
 
+function broadcastUpdaterEvent(name, payload) {
+  for (const win of BrowserWindow.getAllWindows()) {
+    win.webContents.send('updater:event', { name, payload });
+  }
+}
+
 function setupAutoUpdates() {
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
 
+  autoUpdater.on('checking-for-update', () => broadcastUpdaterEvent('checking'));
+  autoUpdater.on('update-available', (info) =>
+    broadcastUpdaterEvent('available', { version: info.version })
+  );
+  autoUpdater.on('update-not-available', (info) =>
+    broadcastUpdaterEvent('not-available', { version: info.version })
+  );
+  autoUpdater.on('download-progress', (progress) =>
+    broadcastUpdaterEvent('progress', { percent: progress.percent })
+  );
   autoUpdater.on('error', (error) => {
     console.error('[updater] error', error);
+    broadcastUpdaterEvent('error', { message: error?.message ?? String(error) });
   });
 
   autoUpdater.on('update-downloaded', async (info) => {
+    broadcastUpdaterEvent('downloaded', { version: info.version });
     const result = await dialog.showMessageBox({
       type: 'info',
       buttons: ['Restart now', 'Later'],
@@ -325,7 +344,18 @@ function setupAutoUpdates() {
     }
   });
 
-  ipcMain.handle('check-for-updates', () => autoUpdater.checkForUpdates());
+  ipcMain.handle('updater:check', async () => {
+    try {
+      const result = await autoUpdater.checkForUpdates();
+      return { ok: true, version: result?.updateInfo?.version ?? null };
+    } catch (error) {
+      return { ok: false, message: error?.message ?? String(error) };
+    }
+  });
+
+  ipcMain.handle('updater:quit-and-install', () => {
+    autoUpdater.quitAndInstall();
+  });
 
   autoUpdater.checkForUpdates().catch((error) => {
     console.error('[updater] check failed', error);

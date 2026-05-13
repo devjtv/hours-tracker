@@ -431,6 +431,13 @@ export default function App() {
   const [newTagName, setNewTagName] = useState('');
   const [editingTagId, setEditingTagId] = useState<string | null>(null);
   const [tagDraft, setTagDraft] = useState({ name: '' });
+  const [appVersion, setAppVersion] = useState('');
+  const [updateStatus, setUpdateStatus] = useState<{
+    state: 'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error';
+    version?: string;
+    percent?: number;
+    message?: string;
+  }>({ state: 'idle' });
   const detailsRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
@@ -452,6 +459,36 @@ export default function App() {
     if (!loaded) return;
     window.hoursTracker.save(data);
   }, [data, loaded]);
+
+  useEffect(() => {
+    window.hoursTracker.getAppVersion().then(setAppVersion);
+    const unsubscribe = window.hoursTracker.onUpdaterEvent(({ name, payload }) => {
+      if (name === 'checking') setUpdateStatus({ state: 'checking' });
+      else if (name === 'available')
+        setUpdateStatus({ state: 'downloading', version: payload?.version, percent: 0 });
+      else if (name === 'not-available')
+        setUpdateStatus({ state: 'not-available', version: payload?.version });
+      else if (name === 'progress')
+        setUpdateStatus((prev) => ({
+          ...prev,
+          state: 'downloading',
+          percent: payload?.percent ?? prev.percent
+        }));
+      else if (name === 'downloaded')
+        setUpdateStatus({ state: 'downloaded', version: payload?.version });
+      else if (name === 'error')
+        setUpdateStatus({ state: 'error', message: payload?.message });
+    });
+    return unsubscribe;
+  }, []);
+
+  async function handleCheckForUpdates() {
+    setUpdateStatus({ state: 'checking' });
+    const result = await window.hoursTracker.checkForUpdates();
+    if (!result.ok) {
+      setUpdateStatus({ state: 'error', message: result.message });
+    }
+  }
 
   useEffect(() => {
     const textarea = detailsRef.current;
@@ -1350,6 +1387,43 @@ export default function App() {
                 onChange={(event) => updateSetting('reportPrompt', event.target.value)}
               />
             </label>
+          </div>
+          <div className="about-card">
+            <div className="about-row">
+              <div>
+                <p className="eyebrow">About</p>
+                <h3>Hours Tracker {appVersion ? `v${appVersion}` : ''}</h3>
+              </div>
+              <button
+                className="ghost-button"
+                onClick={handleCheckForUpdates}
+                disabled={updateStatus.state === 'checking' || updateStatus.state === 'downloading'}
+              >
+                {updateStatus.state === 'checking'
+                  ? 'Checking…'
+                  : updateStatus.state === 'downloading'
+                    ? `Downloading ${Math.round(updateStatus.percent ?? 0)}%`
+                    : updateStatus.state === 'downloaded'
+                      ? 'Restart to install'
+                      : 'Check for updates'}
+              </button>
+            </div>
+            <p className="about-status">
+              {updateStatus.state === 'idle' && 'Updates are checked automatically on launch.'}
+              {updateStatus.state === 'checking' && 'Checking GitHub for a newer release…'}
+              {updateStatus.state === 'not-available' && "You're on the latest version."}
+              {updateStatus.state === 'downloading' &&
+                `Downloading v${updateStatus.version ?? ''} in the background…`}
+              {updateStatus.state === 'downloaded' &&
+                `v${updateStatus.version ?? ''} is ready — restart to install.`}
+              {updateStatus.state === 'error' &&
+                `Update check failed: ${updateStatus.message ?? 'unknown error'}`}
+            </p>
+            {updateStatus.state === 'downloaded' ? (
+              <button className="save-button" onClick={() => window.hoursTracker.quitAndInstall()}>
+                Restart and install
+              </button>
+            ) : null}
           </div>
         </section>
       );
