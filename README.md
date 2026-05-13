@@ -47,6 +47,23 @@ npm run package:mac
 
 Produces an Apple Silicon `.dmg` in `dist/`.
 
+## ⚠️ First launch on macOS
+
+Because the app isn't code-signed or notarized yet, macOS Gatekeeper will mark anything downloaded through a browser as quarantined and refuse to open it with `"Hours Tracker" is damaged and can't be opened`. The app is **not** actually damaged — strip the quarantine flag with:
+
+```bash
+xattr -cr /Applications/Hours\ Tracker.app
+```
+
+After that the app launches normally and future in-app auto-updates apply without re-triggering this warning.
+
+Alternatively, downloading the DMG via `curl` instead of a browser skips quarantine entirely:
+
+```bash
+curl -LO https://github.com/devjtv/hours-tracker/releases/latest/download/Hours-Tracker-arm64.dmg
+open Hours-Tracker-arm64.dmg
+```
+
 ## Releasing a new version
 
 Auto-updates are delivered through GitHub Releases. To cut a new version:
