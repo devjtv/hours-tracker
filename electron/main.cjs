@@ -5,6 +5,8 @@ const { autoUpdater } = require('electron-updater');
 
 const isDev = Boolean(process.env.VITE_DEV_SERVER_URL);
 const DATA_FILE = 'hours-tracker-data.json';
+const WINDOW_STATE_FILE = 'window-state.json';
+const DEFAULT_WINDOW_BOUNDS = { width: 1440, height: 920 };
 const LEGACY_DEMO_PROJECTS = new Set([
   'Uniplan Website Updates',
   'Akura - button options',
@@ -181,11 +183,41 @@ function getIconPath() {
   });
 }
 
-function createWindow() {
+function getWindowStatePath() {
+  return path.join(app.getPath('userData'), WINDOW_STATE_FILE);
+}
+
+async function readWindowState() {
+  try {
+    const raw = await fs.readFile(getWindowStatePath(), 'utf-8');
+    const parsed = JSON.parse(raw);
+    const width = Number.isFinite(parsed.width) ? parsed.width : DEFAULT_WINDOW_BOUNDS.width;
+    const height = Number.isFinite(parsed.height) ? parsed.height : DEFAULT_WINDOW_BOUNDS.height;
+    const x = Number.isFinite(parsed.x) ? parsed.x : undefined;
+    const y = Number.isFinite(parsed.y) ? parsed.y : undefined;
+    const isMaximized = Boolean(parsed.isMaximized);
+    return { width, height, x, y, isMaximized };
+  } catch {
+    return { ...DEFAULT_WINDOW_BOUNDS, isMaximized: false };
+  }
+}
+
+async function writeWindowState(state) {
+  try {
+    await fs.writeFile(getWindowStatePath(), JSON.stringify(state, null, 2), 'utf-8');
+  } catch (error) {
+    console.error('[window-state] save failed', error);
+  }
+}
+
+async function createWindow() {
   const iconPath = getIconPath();
+  const saved = await readWindowState();
   const mainWindow = new BrowserWindow({
-    width: 1440,
-    height: 920,
+    width: saved.width,
+    height: saved.height,
+    x: saved.x,
+    y: saved.y,
     minWidth: 520,
     minHeight: 560,
     backgroundColor: '#1f1f20',
@@ -196,6 +228,32 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.cjs')
     }
   });
+
+  if (saved.isMaximized) {
+    mainWindow.maximize();
+  }
+
+  let saveTimer = null;
+  const persistBounds = () => {
+    if (mainWindow.isDestroyed()) return;
+    const bounds = mainWindow.getNormalBounds();
+    writeWindowState({
+      width: bounds.width,
+      height: bounds.height,
+      x: bounds.x,
+      y: bounds.y,
+      isMaximized: mainWindow.isMaximized()
+    });
+  };
+  const scheduleSave = () => {
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(persistBounds, 400);
+  };
+  mainWindow.on('resize', scheduleSave);
+  mainWindow.on('move', scheduleSave);
+  mainWindow.on('maximize', scheduleSave);
+  mainWindow.on('unmaximize', scheduleSave);
+  mainWindow.on('close', persistBounds);
 
   if (isDev) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
