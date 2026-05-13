@@ -370,6 +370,7 @@ function broadcastUpdaterEvent(name, payload) {
 function setupAutoUpdates() {
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.disableDifferentialDownload = true;
 
   autoUpdater.on('checking-for-update', () => broadcastUpdaterEvent('checking'));
   autoUpdater.on('update-available', (info) =>
