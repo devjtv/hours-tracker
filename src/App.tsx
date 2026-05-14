@@ -193,6 +193,10 @@ function dayKey(dateString: string) {
   ).padStart(2, '0')}`;
 }
 
+function currentDayKey() {
+  return dayKey(new Date().toString());
+}
+
 function dayHeading(dateString: string) {
   return new Intl.DateTimeFormat('en-AU', {
     weekday: 'short',
@@ -392,7 +396,7 @@ function roundedNow() {
 }
 
 function defaultDraft(tasks: TaskItem[], entries: TimeEntry[] = [], targetDay?: string): EntryDraft {
-  const fallbackDay = targetDay ?? dayKey(new Date().toISOString());
+  const fallbackDay = targetDay ?? currentDayKey();
   const previousEntry = [...entries]
     .filter((entry) => dayKey(entry.start) === fallbackDay)
     .sort((a, b) => new Date(b.end).getTime() - new Date(a.end).getTime())[0];
@@ -437,7 +441,8 @@ export default function App() {
   const [draft, setDraft] = useState<EntryDraft>(defaultDraft([]));
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [activeDay, setActiveDay] = useState('');
-  const [reportDay, setReportDay] = useState(dayKey(new Date().toISOString()));
+  const [currentDay, setCurrentDay] = useState(currentDayKey());
+  const [reportDay, setReportDay] = useState(currentDayKey());
   const [reportText, setReportText] = useState('');
   const [copyStatus, setCopyStatus] = useState('');
   const [reportBusy, setReportBusy] = useState(false);
@@ -464,21 +469,51 @@ export default function App() {
     message?: string;
   }>({ state: 'idle' });
   const detailsRef = useRef<HTMLTextAreaElement | null>(null);
+  const previousCurrentDayRef = useRef(currentDay);
 
   useEffect(() => {
     window.hoursTracker.load().then((loadedData) => {
       const latest = sortEntries(loadedData.entries)[0];
-      const initialDay = latest ? dayKey(latest.start) : dayKey(new Date().toISOString());
+      const today = currentDayKey();
+      const initialDay = latest ? dayKey(latest.start) : today;
       setData(loadedData);
       setDraft({
         ...defaultDraft(loadedData.tasks, loadedData.entries, initialDay),
         taskId: getDefaultTaskId(loadedData)
       });
       setActiveDay(initialDay);
-      setReportDay(dayKey(new Date().toISOString()));
+      setCurrentDay(today);
+      setReportDay(today);
       setLoaded(true);
     });
   }, []);
+
+  useEffect(() => {
+    function refreshCurrentDay() {
+      setCurrentDay((existing) => {
+        const next = currentDayKey();
+        return existing === next ? existing : next;
+      });
+    }
+
+    const intervalId = window.setInterval(refreshCurrentDay, 60_000);
+    window.addEventListener('focus', refreshCurrentDay);
+    document.addEventListener('visibilitychange', refreshCurrentDay);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', refreshCurrentDay);
+      document.removeEventListener('visibilitychange', refreshCurrentDay);
+    };
+  }, []);
+
+  useEffect(() => {
+    const previousCurrentDay = previousCurrentDayRef.current;
+    if (previousCurrentDay === currentDay) return;
+
+    setReportDay((existing) => (existing === previousCurrentDay ? currentDay : existing));
+    previousCurrentDayRef.current = currentDay;
+  }, [currentDay]);
 
   useEffect(() => {
     if (!loaded) return;
@@ -589,11 +624,10 @@ export default function App() {
   }, [data.entries]);
 
   const totalToday = useMemo(() => {
-    const today = dayKey(new Date().toISOString());
     return data.entries
-      .filter((entry) => dayKey(entry.start) === today)
+      .filter((entry) => dayKey(entry.start) === currentDay)
       .reduce((sum, entry) => sum + entryMinutes(entry), 0);
-  }, [data.entries]);
+  }, [currentDay, data.entries]);
 
   const projectOptions = useMemo<ProjectOption[]>(() => {
     const projectSet = new Set(sortEntries(data.entries).map((entry) => entry.project).filter(Boolean));
@@ -629,7 +663,7 @@ export default function App() {
 
   const activeDateLabel =
     groupedEntries.find(([key]) => key === activeDay)?.[1].label ??
-    dayHeading(new Date().toISOString());
+    dayHeading(`${currentDay}T00:00:00`);
 
   const summaryByProject = useMemo(() => {
     const grouped = new Map<string, TimeEntry[]>();
@@ -679,7 +713,7 @@ export default function App() {
     setEditingEntryId(null);
     setCollapsedDays((current) => current.filter((day) => day !== activeDay));
     const nextDraft = {
-      ...defaultDraft(data.tasks, data.entries, activeDay),
+      ...defaultDraft(data.tasks, data.entries, currentDay),
       taskId: getDefaultTaskId(data)
     };
     setDraft(nextDraft);
@@ -705,7 +739,7 @@ export default function App() {
     setShowComposer(false);
     setEditingEntryId(null);
     setDraft({
-      ...defaultDraft(data.tasks, data.entries, activeDay),
+      ...defaultDraft(data.tasks, data.entries, currentDay),
       taskId: getDefaultTaskId(data)
     });
     setProjectInput('');
