@@ -1,7 +1,6 @@
-const { app, BrowserWindow, clipboard, dialog, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, clipboard, ipcMain, shell } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs/promises');
-const { autoUpdater } = require('electron-updater');
 
 const isDev = Boolean(process.env.VITE_DEV_SERVER_URL);
 const DATA_FILE = 'hours-tracker-data.json';
@@ -355,71 +354,7 @@ app.whenReady().then(() => {
       createWindow();
     }
   });
-
-  if (!isDev) {
-    setupAutoUpdates();
-  }
 });
-
-function broadcastUpdaterEvent(name, payload) {
-  for (const win of BrowserWindow.getAllWindows()) {
-    win.webContents.send('updater:event', { name, payload });
-  }
-}
-
-function setupAutoUpdates() {
-  autoUpdater.autoDownload = true;
-  autoUpdater.autoInstallOnAppQuit = true;
-  autoUpdater.disableDifferentialDownload = true;
-
-  autoUpdater.on('checking-for-update', () => broadcastUpdaterEvent('checking'));
-  autoUpdater.on('update-available', (info) =>
-    broadcastUpdaterEvent('available', { version: info.version })
-  );
-  autoUpdater.on('update-not-available', (info) =>
-    broadcastUpdaterEvent('not-available', { version: info.version })
-  );
-  autoUpdater.on('download-progress', (progress) =>
-    broadcastUpdaterEvent('progress', { percent: progress.percent })
-  );
-  autoUpdater.on('error', (error) => {
-    console.error('[updater] error', error);
-    broadcastUpdaterEvent('error', { message: error?.message ?? String(error) });
-  });
-
-  autoUpdater.on('update-downloaded', async (info) => {
-    broadcastUpdaterEvent('downloaded', { version: info.version });
-    const result = await dialog.showMessageBox({
-      type: 'info',
-      buttons: ['Restart now', 'Later'],
-      defaultId: 0,
-      cancelId: 1,
-      title: 'Update ready',
-      message: `Hours Tracker ${info.version} has been downloaded.`,
-      detail: 'Restart the app to install the update.'
-    });
-    if (result.response === 0) {
-      autoUpdater.quitAndInstall();
-    }
-  });
-
-  ipcMain.handle('updater:check', async () => {
-    try {
-      const result = await autoUpdater.checkForUpdates();
-      return { ok: true, version: result?.updateInfo?.version ?? null };
-    } catch (error) {
-      return { ok: false, message: error?.message ?? String(error) };
-    }
-  });
-
-  ipcMain.handle('updater:quit-and-install', () => {
-    autoUpdater.quitAndInstall();
-  });
-
-  autoUpdater.checkForUpdates().catch((error) => {
-    console.error('[updater] check failed', error);
-  });
-}
 
 app.on('window-all-closed', () => {
   app.quit();

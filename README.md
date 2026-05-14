@@ -24,11 +24,10 @@ Local-first macOS hours tracker with a dark timeline UI and AI-generated end-of-
 - 🎨 Per-task colours and reusable tags
 - 💾 Local-disk storage via the Electron main process — no cloud, no account
 - 🤖 AI end-of-day report generation through any OpenAI-compatible endpoint
-- 🔁 In-app auto-updates via [electron-updater](https://www.electron.build/auto-update) and GitHub Releases
 
 ## Stack
 
-`Electron` · `React` · `TypeScript` · `Vite` · `electron-builder` · `electron-updater`
+`Electron` · `React` · `TypeScript` · `Vite` · `electron-builder`
 
 ## Local development
 
@@ -55,7 +54,7 @@ Because the app isn't code-signed or notarized yet, macOS Gatekeeper will mark a
 xattr -cr /Applications/Hours\ Tracker.app
 ```
 
-After that the app launches normally and future in-app auto-updates apply without re-triggering this warning.
+After that the app launches normally.
 
 Alternatively, downloading the DMG via `curl` instead of a browser skips quarantine entirely:
 
@@ -66,7 +65,7 @@ open Hours-Tracker-arm64.dmg
 
 ## Releasing a new version
 
-Auto-updates are delivered through GitHub Releases. To cut a new version:
+To cut a new version:
 
 1. Bump `version` in `package.json` (e.g. `0.1.0` → `0.1.1`). Semver.
 2. Commit, tag, push:
@@ -84,11 +83,7 @@ Auto-updates are delivered through GitHub Releases. To cut a new version:
    set -a && . ./.env && set +a && npm run release:mac
    ```
 
-This uploads the `.dmg`, `.zip`, blockmaps, and `latest-mac.yml` to a **draft** release. Edit the draft on GitHub, write release notes, and publish.
-
-Installed apps check `latest-mac.yml` on launch, download the new `.zip` in the background, and prompt to restart once it's ready. Settings → **Check for updates** triggers the same flow manually.
-
-> ⚠️ Auto-install reliability requires code-signing. Unsigned builds may need users to drag the new `.app` into Applications manually if Gatekeeper blocks the swap.
+This uploads release artifacts to a **draft** GitHub release. Edit draft on GitHub, write release notes, and publish.
 
 ## AI provider notes
 
@@ -105,7 +100,7 @@ For Anthropic / Gemini native request shapes, add a provider adapter in `electro
 ## Project layout
 
 ```
-electron/   Main + preload process (storage, AI, updater, IPC)
+electron/   Main + preload process (storage, AI, IPC)
 src/        React renderer (App.tsx, styles, types)
 assets/     App icon used by electron-builder
 scripts/    Build helpers

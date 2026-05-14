@@ -461,13 +461,8 @@ export default function App() {
   const [editingTagId, setEditingTagId] = useState<string | null>(null);
   const [tagDraft, setTagDraft] = useState({ name: '' });
   const [projectInput, setProjectInput] = useState('');
+  const [isProjectEditing, setIsProjectEditing] = useState(false);
   const [appVersion, setAppVersion] = useState('');
-  const [updateStatus, setUpdateStatus] = useState<{
-    state: 'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error';
-    version?: string;
-    percent?: number;
-    message?: string;
-  }>({ state: 'idle' });
   const detailsRef = useRef<HTMLTextAreaElement | null>(null);
   const previousCurrentDayRef = useRef(currentDay);
 
@@ -522,33 +517,7 @@ export default function App() {
 
   useEffect(() => {
     window.hoursTracker.getAppVersion().then(setAppVersion);
-    const unsubscribe = window.hoursTracker.onUpdaterEvent(({ name, payload }) => {
-      if (name === 'checking') setUpdateStatus({ state: 'checking' });
-      else if (name === 'available')
-        setUpdateStatus({ state: 'downloading', version: payload?.version, percent: 0 });
-      else if (name === 'not-available')
-        setUpdateStatus({ state: 'not-available', version: payload?.version });
-      else if (name === 'progress')
-        setUpdateStatus((prev) => ({
-          ...prev,
-          state: 'downloading',
-          percent: payload?.percent ?? prev.percent
-        }));
-      else if (name === 'downloaded')
-        setUpdateStatus({ state: 'downloaded', version: payload?.version });
-      else if (name === 'error')
-        setUpdateStatus({ state: 'error', message: payload?.message });
-    });
-    return unsubscribe;
   }, []);
-
-  async function handleCheckForUpdates() {
-    setUpdateStatus({ state: 'checking' });
-    const result = await window.hoursTracker.checkForUpdates();
-    if (!result.ok) {
-      setUpdateStatus({ state: 'error', message: result.message });
-    }
-  }
 
   useEffect(() => {
     const textarea = detailsRef.current;
@@ -718,6 +687,7 @@ export default function App() {
     };
     setDraft(nextDraft);
     setProjectInput(nextDraft.project);
+    setIsProjectEditing(false);
     setShowComposer(true);
   }
 
@@ -727,12 +697,14 @@ export default function App() {
     const nextDraft = entryToDraft(entry);
     setDraft(nextDraft);
     setProjectInput(nextDraft.project);
+    setIsProjectEditing(false);
     setShowComposer(true);
   }
 
   function updateDraftProject(project: string) {
     setDraft((current) => ({ ...current, project }));
     setProjectInput(project);
+    setIsProjectEditing(false);
   }
 
   function closeComposer() {
@@ -743,13 +715,23 @@ export default function App() {
       taskId: getDefaultTaskId(data)
     });
     setProjectInput('');
+    setIsProjectEditing(false);
   }
 
   function handleProjectInputChange(inputValue: string, meta: InputActionMeta) {
-    if (meta.action === 'input-change') {
-      setProjectInput(inputValue);
-      setDraft((current) => ({ ...current, project: inputValue }));
-    }
+    if (meta.action !== 'input-change') return;
+    setProjectInput(inputValue);
+    setDraft((current) => ({ ...current, project: inputValue }));
+  }
+
+  function handleProjectFocus() {
+    setIsProjectEditing(true);
+    setProjectInput((existing) => existing || draft.project);
+  }
+
+  function handleProjectBlur() {
+    setIsProjectEditing(false);
+    setProjectInput('');
   }
 
   function renderTaskOptionLabel(option: TaskOption) {
@@ -1486,36 +1468,7 @@ export default function App() {
                 <p className="eyebrow">About</p>
                 <h3>Hours Tracker {appVersion ? `v${appVersion}` : ''}</h3>
               </div>
-              <button
-                className="ghost-button"
-                onClick={handleCheckForUpdates}
-                disabled={updateStatus.state === 'checking' || updateStatus.state === 'downloading'}
-              >
-                {updateStatus.state === 'checking'
-                  ? 'Checking…'
-                  : updateStatus.state === 'downloading'
-                    ? `Downloading ${Math.round(updateStatus.percent ?? 0)}%`
-                    : updateStatus.state === 'downloaded'
-                      ? 'Restart to install'
-                      : 'Check for updates'}
-              </button>
             </div>
-            <p className="about-status">
-              {updateStatus.state === 'idle' && 'Updates are checked automatically on launch.'}
-              {updateStatus.state === 'checking' && 'Checking GitHub for a newer release…'}
-              {updateStatus.state === 'not-available' && "You're on the latest version."}
-              {updateStatus.state === 'downloading' &&
-                `Downloading v${updateStatus.version ?? ''} in the background…`}
-              {updateStatus.state === 'downloaded' &&
-                `v${updateStatus.version ?? ''} is ready — restart to install.`}
-              {updateStatus.state === 'error' &&
-                `Update check failed: ${updateStatus.message ?? 'unknown error'}`}
-            </p>
-            {updateStatus.state === 'downloaded' ? (
-              <button className="save-button" onClick={() => window.hoursTracker.quitAndInstall()}>
-                Restart and install
-              </button>
-            ) : null}
           </div>
         </section>
       );
@@ -1659,11 +1612,14 @@ export default function App() {
                   placeholder="Search or type a project"
                   formatCreateLabel={(inputValue) => `Use "${inputValue}"`}
                   options={projectOptions}
-                  value={null}
-                  inputValue={projectInput}
+                  value={draft.project ? { value: draft.project, label: draft.project } : null}
+                  inputValue={isProjectEditing ? projectInput : ''}
                   onInputChange={handleProjectInputChange}
                   onChange={(option) => updateDraftProject(option?.value ?? '')}
                   onCreateOption={updateDraftProject}
+                  onFocus={handleProjectFocus}
+                  onBlur={handleProjectBlur}
+                  controlShouldRenderValue={!isProjectEditing}
                   filterOption={createFilter({ matchFrom: 'any' })}
                   noOptionsMessage={() => null}
                   isClearable
