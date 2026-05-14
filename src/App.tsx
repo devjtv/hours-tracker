@@ -678,25 +678,27 @@ export default function App() {
   function openNewEntry() {
     setEditingEntryId(null);
     setCollapsedDays((current) => current.filter((day) => day !== activeDay));
-    setDraft({
+    const nextDraft = {
       ...defaultDraft(data.tasks, data.entries, activeDay),
       taskId: getDefaultTaskId(data)
-    });
-    setProjectInput('');
+    };
+    setDraft(nextDraft);
+    setProjectInput(nextDraft.project);
     setShowComposer(true);
   }
 
   function openEditEntry(entry: TimeEntry) {
     setEditingEntryId(entry.id);
     setCollapsedDays((current) => current.filter((day) => day !== dayKey(entry.start)));
-    setDraft(entryToDraft(entry));
-    setProjectInput('');
+    const nextDraft = entryToDraft(entry);
+    setDraft(nextDraft);
+    setProjectInput(nextDraft.project);
     setShowComposer(true);
   }
 
   function updateDraftProject(project: string) {
     setDraft((current) => ({ ...current, project }));
-    setProjectInput('');
+    setProjectInput(project);
   }
 
   function closeComposer() {
@@ -712,6 +714,7 @@ export default function App() {
   function handleProjectInputChange(inputValue: string, meta: InputActionMeta) {
     if (meta.action === 'input-change') {
       setProjectInput(inputValue);
+      setDraft((current) => ({ ...current, project: inputValue }));
     }
   }
 
@@ -737,7 +740,7 @@ export default function App() {
     if (!draft.start || !draft.end) return;
 
     const nextTaskId = draft.taskId || getDefaultTaskId(data);
-    const projectName = draft.project.trim() || projectInput.trim();
+    const projectName = projectInput.trim() || draft.project.trim();
 
     setData((current) => {
       const nextEntry: TimeEntry = {
@@ -1622,7 +1625,7 @@ export default function App() {
                   placeholder="Search or type a project"
                   formatCreateLabel={(inputValue) => `Use "${inputValue}"`}
                   options={projectOptions}
-                  value={draft.project ? { value: draft.project, label: draft.project } : null}
+                  value={null}
                   inputValue={projectInput}
                   onInputChange={handleProjectInputChange}
                   onChange={(option) => updateDraftProject(option?.value ?? '')}
