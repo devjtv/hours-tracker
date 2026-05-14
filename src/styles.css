@@ -290,18 +290,21 @@ button {
 
 .entry-title-row {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
 }
 
 .entry-title-row h3 {
   margin: 0;
-  font-size: 1.06rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 1rem;
 }
 
 .entry-title-row strong {
   white-space: nowrap;
-  font-size: 0.98rem;
+  font-size: 0.92rem;
 }
 
 .entry-main > p {
@@ -920,8 +923,7 @@ button {
   }
 
   .brand {
-    margin: 0 8px 12px;
-    font-size: 1rem;
+    display: none;
   }
 
   .sidebar-nav {
@@ -967,18 +969,12 @@ button {
     display: none;
   }
 
-  .entry-title-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
-  }
-
   .entry-title-row strong {
-    font-size: 1rem;
+    font-size: 0.96rem;
   }
 
   .entry-title-row h3 {
-    font-size: 1.12rem;
+    font-size: 1.04rem;
   }
 
   .detail-panel,
