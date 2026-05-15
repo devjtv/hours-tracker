@@ -528,6 +528,44 @@ button {
   color: #c0c3c8;
 }
 
+.summary-breakdown-item {
+  align-items: flex-start;
+}
+
+.summary-breakdown-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.summary-breakdown-copy span {
+  color: #b4b8be;
+  font-size: 0.86rem;
+}
+
+.summary-breakdown-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 12px;
+  min-height: 100%;
+}
+
+.summary-breakdown-side .row-icon {
+  margin-top: auto;
+}
+
+.summary-description-list {
+  margin: 2px 0 0;
+  padding-left: 18px;
+  color: #d8dbe0;
+  font-size: 0.9rem;
+}
+
+.summary-description-list li + li {
+  margin-top: 4px;
+}
+
 .button-row {
   width: 100%;
   border: 0;
@@ -611,13 +649,56 @@ button {
   justify-content: center;
   width: 30px;
   height: 30px;
+  padding: 0;
+  border: 0;
   border-radius: 8px;
+  color: inherit;
   background: rgba(255, 255, 255, 0.06);
 }
 
 .row-icon.danger {
   color: #ffd6d6;
   background: rgba(201, 51, 51, 0.18);
+}
+
+.row-icon.active,
+.active-toggle {
+  color: #dce7ff;
+  background: rgba(52, 128, 255, 0.2);
+}
+
+.tooltip-anchor {
+  position: relative;
+}
+
+.tooltip-anchor::after {
+  content: none;
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  transform: translateY(4px);
+  min-width: max-content;
+  max-width: 220px;
+  padding: 6px 8px;
+  border: 1px solid #4d5056;
+  border-radius: 8px;
+  color: #f4f6f8;
+  background: #202123;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+  font-size: 0.78rem;
+  line-height: 1.25;
+  white-space: normal;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 120ms ease, transform 120ms ease;
+  z-index: 30;
+}
+
+.tooltip-anchor:hover::after,
+.tooltip-anchor:focus-visible::after {
+  content: attr(data-tooltip);
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .stats-grid {
@@ -757,7 +838,11 @@ button {
 }
 
 .task-form {
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 1fr auto auto auto;
+}
+
+.task-create-form {
+  grid-template-columns: 1fr auto;
 }
 
 .color-input {
@@ -928,7 +1013,7 @@ button {
 
   .sidebar-nav {
     display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-template-columns: repeat(8, minmax(0, 1fr));
     gap: 6px;
     margin-top: 4px;
   }
@@ -989,6 +1074,10 @@ button {
   .datetime-grid,
   .settings-grid {
     grid-template-columns: 1fr;
+  }
+
+  .task-create-form {
+    grid-template-columns: 1fr auto;
   }
 
   .page-controls {

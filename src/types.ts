@@ -1,9 +1,10 @@
-export type SidebarView = 'time' | 'tasks' | 'tags' | 'reports' | 'analytics' | 'settings';
+export type SidebarView = 'time' | 'summary' | 'tasks' | 'tags' | 'reports' | 'analytics' | 'settings';
 
 export type TaskItem = {
   id: string;
   name: string;
   color: string;
+  excludeFromSummary?: boolean;
 };
 
 export type TagItem = {

@@ -4,7 +4,11 @@ import CreatableSelect from 'react-select/creatable';
 import {
   BarChart3,
   ChevronDown,
+  ClipboardList,
   Clock3,
+  Copy,
+  Eye,
+  EyeOff,
   FolderKanban,
   GripVertical,
   Pencil,
@@ -19,6 +23,7 @@ import type { AppData, SidebarView, TagItem, TaskItem, TimeEntry } from './types
 
 const sidebarItems: { id: SidebarView; label: string; icon: typeof Clock3 }[] = [
   { id: 'time', label: 'Time tracking', icon: Clock3 },
+  { id: 'summary', label: 'Summary', icon: ClipboardList },
   { id: 'tasks', label: 'Tasks', icon: FolderKanban },
   { id: 'tags', label: 'Tags', icon: Tag },
   { id: 'reports', label: 'EOD report', icon: Sparkles },
@@ -442,6 +447,7 @@ export default function App() {
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [activeDay, setActiveDay] = useState('');
   const [currentDay, setCurrentDay] = useState(currentDayKey());
+  const [summaryDay, setSummaryDay] = useState(currentDayKey());
   const [reportDay, setReportDay] = useState(currentDayKey());
   const [reportText, setReportText] = useState('');
   const [copyStatus, setCopyStatus] = useState('');
@@ -454,7 +460,7 @@ export default function App() {
   const [newTaskName, setNewTaskName] = useState('');
   const [newTaskColor, setNewTaskColor] = useState('#f6a318');
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [taskDraft, setTaskDraft] = useState({ name: '', color: '#f6a318' });
+  const [taskDraft, setTaskDraft] = useState({ name: '', color: '#f6a318', excludeFromSummary: false });
   const [dragTaskId, setDragTaskId] = useState<string | null>(null);
   const [taskDeleteTarget, setTaskDeleteTarget] = useState<TaskItem | null>(null);
   const [newTagName, setNewTagName] = useState('');
@@ -478,6 +484,7 @@ export default function App() {
       });
       setActiveDay(initialDay);
       setCurrentDay(today);
+      setSummaryDay(today);
       setReportDay(today);
       setLoaded(true);
     });
@@ -506,6 +513,7 @@ export default function App() {
     const previousCurrentDay = previousCurrentDayRef.current;
     if (previousCurrentDay === currentDay) return;
 
+    setSummaryDay((existing) => (existing === previousCurrentDay ? currentDay : existing));
     setReportDay((existing) => (existing === previousCurrentDay ? currentDay : existing));
     previousCurrentDayRef.current = currentDay;
   }, [currentDay]);
@@ -644,6 +652,48 @@ export default function App() {
     });
     return [...grouped.entries()];
   }, [activeEntries, data.tasks]);
+
+  const summaryEntries = useMemo(
+    () => data.entries.filter((entry) => dayKey(entry.start) === summaryDay),
+    [data.entries, summaryDay]
+  );
+
+  const summaryDateLabel = dayHeading(`${summaryDay}T00:00:00`);
+
+  const summaryProjectTotals = useMemo(() => {
+    const grouped = new Map<
+      string,
+      { minutes: number; entries: number; tasks: Set<string>; descriptions: string[] }
+    >();
+
+    summaryEntries.forEach((entry) => {
+      if (taskMap[entry.taskId]?.excludeFromSummary) return;
+      const project = entryDisplayProject(entry, data.tasks);
+      const current = grouped.get(project) ?? {
+        minutes: 0,
+        entries: 0,
+        tasks: new Set<string>(),
+        descriptions: []
+      };
+      current.minutes += entryMinutes(entry);
+      current.entries += 1;
+      current.tasks.add(taskMap[entry.taskId]?.name ?? 'Without task');
+      if (entry.details.trim()) {
+        current.descriptions.push(entry.details.trim());
+      }
+      grouped.set(project, current);
+    });
+
+    return [...grouped.entries()]
+      .map(([project, value]) => ({
+        project,
+        minutes: value.minutes,
+        entries: value.entries,
+        tasks: [...value.tasks],
+        descriptions: value.descriptions
+      }))
+      .sort((a, b) => b.minutes - a.minutes || a.project.localeCompare(b.project));
+  }, [data.tasks, summaryEntries, taskMap]);
 
   const reportEntries = useMemo(
     () => data.entries.filter((entry) => dayKey(entry.start) === reportDay),
@@ -806,7 +856,12 @@ export default function App() {
   function addTask() {
     if (!newTaskName.trim()) return;
 
-    const nextTask = { id: uid('task'), name: newTaskName.trim(), color: newTaskColor };
+    const nextTask = {
+      id: uid('task'),
+      name: newTaskName.trim(),
+      color: newTaskColor,
+      excludeFromSummary: false
+    };
     setData((current) => ({
       ...current,
       tasks: [...current.tasks, nextTask],
@@ -819,7 +874,11 @@ export default function App() {
 
   function startTaskEdit(task: TaskItem) {
     setEditingTaskId(task.id);
-    setTaskDraft({ name: task.name, color: task.color });
+    setTaskDraft({
+      name: task.name,
+      color: task.color,
+      excludeFromSummary: Boolean(task.excludeFromSummary)
+    });
   }
 
   function saveTaskEdit() {
@@ -829,7 +888,12 @@ export default function App() {
       ...current,
       tasks: current.tasks.map((task) =>
         task.id === editingTaskId
-          ? { ...task, name: taskDraft.name.trim(), color: taskDraft.color }
+          ? {
+              ...task,
+              name: taskDraft.name.trim(),
+              color: taskDraft.color,
+              excludeFromSummary: taskDraft.excludeFromSummary
+            }
           : task
       )
     }));
@@ -876,6 +940,24 @@ export default function App() {
         defaultTaskId: taskId
       }
     }));
+  }
+
+  function toggleTaskSummaryExclusion(taskId: string) {
+    setData((current) => ({
+      ...current,
+      tasks: current.tasks.map((task) =>
+        task.id === taskId
+          ? { ...task, excludeFromSummary: !task.excludeFromSummary }
+          : task
+      )
+    }));
+
+    if (editingTaskId === taskId) {
+      setTaskDraft((current) => ({
+        ...current,
+        excludeFromSummary: !current.excludeFromSummary
+      }));
+    }
   }
 
   function moveTask(draggedId: string, targetId: string) {
@@ -1031,6 +1113,14 @@ export default function App() {
 
     await window.hoursTracker.writeClipboard({ text: markdown });
     setCopyStatus('Copied markdown');
+  }
+
+  async function copySummaryDescriptions(descriptions: string[]) {
+    if (descriptions.length === 0) return;
+    await window.hoursTracker.writeClipboard({
+      text: descriptions.map((description) => `- ${description}`).join('\n')
+    });
+    setCopyStatus('Copied summary items');
   }
 
   if (!loaded) {
@@ -1193,6 +1283,67 @@ export default function App() {
       );
     }
 
+    if (view === 'summary') {
+      return (
+        <section className="main-view-card">
+          <div className="view-header">
+            <div>
+              <p className="eyebrow">Summary</p>
+              <h2>{summaryDateLabel}</h2>
+            </div>
+          </div>
+          <div className="page-controls">
+            <label className="control-field">
+              <span>Day</span>
+              <input
+                type="date"
+                value={summaryDay}
+                onChange={(event) => setSummaryDay(event.target.value)}
+              />
+            </label>
+          </div>
+          <div className="summary-stack">
+            {summaryProjectTotals.length > 0 ? (
+              summaryProjectTotals.map((item) => (
+                <div key={item.project} className="summary-item summary-breakdown-item">
+                  <div className="summary-breakdown-copy">
+                    <strong>{item.project}</strong>
+                    <span>
+                      {item.entries} {item.entries === 1 ? 'entry' : 'entries'} • {item.tasks.join(', ')}
+                    </span>
+                    {item.descriptions.length > 0 ? (
+                      <ul className="summary-description-list">
+                        {item.descriptions.map((description, index) => (
+                          <li key={`${item.project}-${index}`}>{description}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+                  <div className="summary-breakdown-side">
+                    <span>{formatMinutes(item.minutes)}</span>
+                    {item.descriptions.length > 0 ? (
+                      <button
+                        className="row-icon tooltip-anchor"
+                        data-tooltip="Copy item descriptions"
+                        onClick={() => copySummaryDescriptions(item.descriptions)}
+                      >
+                        <Copy size={14} />
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="summary-item empty">
+                <strong>No entries for this day</strong>
+                <span>0 min</span>
+              </div>
+            )}
+          </div>
+        </section>
+      );
+    }
+
     if (view === 'tasks') {
       return (
         <section className="main-view-card">
@@ -1204,7 +1355,7 @@ export default function App() {
           </div>
           <p className="view-copy">Drag to reorder. Mark one task as the default for new time entries.</p>
           <div className="page-stack">
-            <div className="inline-form task-form">
+            <div className="inline-form task-form task-create-form">
               <input
                 value={newTaskName}
                 onChange={(event) => setNewTaskName(event.target.value)}
@@ -1216,7 +1367,7 @@ export default function App() {
                 onChange={(event) => setNewTaskColor(event.target.value)}
                 className="color-input"
               />
-              <button className="save-button" onClick={addTask}>
+              <button className="save-button full-width" onClick={addTask}>
                 Add
               </button>
             </div>
@@ -1255,6 +1406,26 @@ export default function App() {
                           }
                           className="color-input"
                         />
+                        <button
+                          className={
+                            taskDraft.excludeFromSummary
+                              ? 'ghost-button active-toggle tooltip-anchor'
+                              : 'ghost-button tooltip-anchor'
+                          }
+                          onClick={() =>
+                            setTaskDraft((current) => ({
+                              ...current,
+                              excludeFromSummary: !current.excludeFromSummary
+                            }))
+                          }
+                          data-tooltip={
+                            taskDraft.excludeFromSummary
+                              ? 'Included in Summary: click to exclude'
+                              : 'Excluded from Summary: click to include'
+                          }
+                        >
+                          {taskDraft.excludeFromSummary ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
                         <button className="save-button" onClick={saveTaskEdit}>
                           Save
                         </button>
@@ -1281,6 +1452,24 @@ export default function App() {
                               Set as Default
                             </span>
                           ) : null}
+                          <button
+                            className={
+                              task.excludeFromSummary
+                                ? 'row-icon active tooltip-anchor'
+                                : 'row-icon tooltip-anchor'
+                            }
+                            data-tooltip={
+                              task.excludeFromSummary
+                                ? 'Excluded from Summary: click to include again'
+                                : 'Included in Summary: click to exclude'
+                            }
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              toggleTaskSummaryExclusion(task.id);
+                            }}
+                          >
+                            {task.excludeFromSummary ? <EyeOff size={14} /> : <Eye size={14} />}
+                          </button>
                           <Pencil size={14} />
                           {data.tasks.length > 1 ? (
                               <span

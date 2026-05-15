@@ -26,7 +26,7 @@ const LEGACY_DEMO_TASK_NAMES = new Set([
   'Quoting',
   'ADDED TO CENTRAL'
 ]);
-const DEFAULT_TASKS = [{ id: 'task-none', name: 'Without task', color: '#5f7cf6' }];
+const DEFAULT_TASKS = [{ id: 'task-none', name: 'Without task', color: '#5f7cf6', excludeFromSummary: false }];
 
 const seedData = {
   entries: [],
@@ -74,8 +74,12 @@ function normalizeData(raw) {
         LEGACY_DEMO_TASK_NAMES.has(task.name)
     );
 
-  const safeTasks =
-    incomingTasks.length > 0 && !hasOnlyLegacyDemoTasks ? incomingTasks : base.tasks;
+  const safeTasks = (incomingTasks.length > 0 && !hasOnlyLegacyDemoTasks ? incomingTasks : base.tasks).map(
+    (task) => ({
+      ...task,
+      excludeFromSummary: Boolean(task?.excludeFromSummary)
+    })
+  );
   const taskIds = new Set(safeTasks.map((task) => task.id));
   const safeTags = Array.isArray(incoming.tags) ? incoming.tags : [];
   const safeSettings = {
